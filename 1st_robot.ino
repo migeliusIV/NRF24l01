@@ -57,7 +57,7 @@ void setup() {
   radio.startListening(); // Начинаем прослушивать открываемую трубу
   
   shooter.attach(pin_servo);
-  // Инициализация стрелялки: 0 -> 120 -> 40
+  // Инициализация стрелялки: нулевое положение(servo_start 0) -> положение взвода курка(servo_second 120) -> положение на изготове(servo_ready 30)
   for (int i = servo_start; i <= servo_second; i++) {
     shooter.write(i);
     delay(15);
