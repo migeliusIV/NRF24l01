@@ -37,7 +37,7 @@ void setup() {
   // Установка всех управляющих пинов в режим выхода
   pinMode(PIN_ENA, OUTPUT); //левое колесо на аналог
   pinMode(PIN_ENB, OUTPUT); //правое колесо на аналог
-  pinMode(PIN_IN1, OUTPUT); //
+  pinMode(PIN_IN1, OUTPUT); 
   pinMode(PIN_IN2, OUTPUT);
   pinMode(PIN_IN3, OUTPUT);
   pinMode(PIN_IN4, OUTPUT);
@@ -74,8 +74,10 @@ void setup() {
 void loop() {
   if (radio.available()) {  // Если в буфер приёмника поступили данные
     radio.read(&potValue, sizeof(potValue));    // Читаем показания с пульта
-    //изначально было два варианта. первый - прописать действия в зависимости от джойстика для каждого положения, но так моторы работали ассинхронно.
-    // поэтому было решено прописать действия ситуационно:  4 случая, приведённые ниже
+    // Изначально было два варианта. Первый - прописать действия в зависимости от джойстика для каждого положения, но так моторы работали ассинхронно.
+    // Поэтому было решено прописать действия ситуационно. Оба джойстика вверх, два случая на разные напрваления джойстиков и случай, когда оба вниз.
+    // Программы для управления моторами описаны в функциях: command_slowmode, command_motor, command_forsagemode. Подробнее о них прочитаете в void.
+    
     if (potValue[2] == 0) {
       motor_direction = true;
     } else if (potValue[3] == 0) {
@@ -88,10 +90,12 @@ void loop() {
       shoot = true;
     }
 
-    if (potValue[5] == 1){ // проверка режима езды
-      command_motor();
-    } else {
+    if (potValue[5] == 0){
       command_slowmode();
+    } else if (potValue[6] == 0){
+      command_forsagemode();
+    } else {
+      command_motor();
     }
     
     command_shooter();
@@ -114,12 +118,13 @@ void read_data_motors() {
   }
 }
 
-void command_motor() {
-  // ОБРАБОТКА КОМАНД ДЛЯ МОТОРА
+void command_slowmode() {
+  // Конвертирование значений с потенциометров на моторы в режиме slow mode (для манёвров, требующих бОльшей осторожности, потом поймёте)
+  
   if (motor_direction) {
     if (potValue[0] > 125 && potValue[1] > 125) {
-      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 255));
-      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 255));
+      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 51));
+      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 51));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, HIGH);
@@ -129,8 +134,8 @@ void command_motor() {
       digitalWrite(PIN_IN4, LOW);
 
     } else if (potValue[1] < 125 && potValue[0] > 125) {
-      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 255, 0));
-      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 255));
+      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 51, 0));
+      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 51));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, LOW);
@@ -140,8 +145,8 @@ void command_motor() {
       digitalWrite(PIN_IN3, HIGH);
       digitalWrite(PIN_IN4, LOW);
     } else if (potValue[1] > 125 && potValue[0] < 125) {
-      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 255));
-      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 255, 0));
+      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 51));
+      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 51, 0));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, HIGH);
@@ -151,8 +156,8 @@ void command_motor() {
       digitalWrite(PIN_IN3, LOW);
       digitalWrite(PIN_IN4, HIGH);
     } else if (potValue[0] < 125 && potValue[1] < 125) {
-      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 255, 0));
-      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 255, 0));
+      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 51, 0));
+      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 51, 0));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, LOW);
@@ -164,8 +169,8 @@ void command_motor() {
     }
   } else {
     if (potValue[0] > 125 && potValue[1] > 125) {
-      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 255));
-      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 255));
+      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 51));
+      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 51));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, LOW);
@@ -175,8 +180,8 @@ void command_motor() {
       digitalWrite(PIN_IN3, LOW);
       digitalWrite(PIN_IN4, HIGH);
     } else if (potValue[0] < 125 && potValue[1] > 125) {
-      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 255, 0));
-      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 255));
+      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 51, 0));
+      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 51));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, HIGH);
@@ -186,8 +191,8 @@ void command_motor() {
       digitalWrite(PIN_IN3, LOW);
       digitalWrite(PIN_IN4, HIGH);
     } else if (potValue[0] > 125 && potValue[1] < 125) {
-      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 255));
-      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 255, 0));
+      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 51));
+      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 51, 0));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, LOW);
@@ -197,8 +202,8 @@ void command_motor() {
       digitalWrite(PIN_IN3, HIGH);
       digitalWrite(PIN_IN4, LOW);
     } else if (potValue[1] < 125 && potValue[0] < 125) {
-      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 255, 0));
-      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 255, 0));
+      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 51, 0));
+      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 51, 0));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, HIGH);
@@ -211,8 +216,9 @@ void command_motor() {
   }
 }
 
-void command_slowmode() { 
-  // обработка моторов для режима slow motion (для удобного захвата мяча)
+void command_motor() { 
+  // Конвертирование значений с потенциометров на моторы в режиме обычного движения
+  // (совсем не всегда удобно передвигаться на максимальной скорости, даже с учётом того, что она и так небольшая)
   if (motor_direction) {
     if (potValue[0] > 125 && potValue[1] > 125) {
       analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 85));
@@ -296,6 +302,103 @@ void command_slowmode() {
     } else if (potValue[1] < 125 && potValue[0] < 125) {
       analogWrite(PIN_ENA, map(potValue[0], 0, 125, 85, 0));
       analogWrite(PIN_ENB, map(potValue[1], 0, 125, 85, 0));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+    }
+  }
+}
+
+void command_forsagemode() { 
+  // Конвертирование значений с потенциометров на моторы в режиме forsage mode (для передвижения во время матча по полю)
+  if (motor_direction) {
+    if (potValue[0] > 125 && potValue[1] > 125) {
+      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 255));
+      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 255));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+
+    } else if (potValue[1] < 125 && potValue[0] > 125) {
+      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 255, 0));
+      analogWrite(PIN_ENB, map(potValue[0], 126, 255, 0, 255));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+    } else if (potValue[1] > 125 && potValue[0] < 125) {
+      analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 255));
+      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 255, 0));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+    } else if (potValue[0] < 125 && potValue[1] < 125) {
+      analogWrite(PIN_ENA, map(potValue[1], 0, 125, 255, 0));
+      analogWrite(PIN_ENB, map(potValue[0], 0, 125, 255, 0));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+    }
+  } else {
+    if (potValue[0] > 125 && potValue[1] > 125) {
+      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 255));
+      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 255));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+    } else if (potValue[0] < 125 && potValue[1] > 125) {
+      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 255, 0));
+      analogWrite(PIN_ENB, map(potValue[1], 126, 255, 0, 255));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, HIGH);
+      digitalWrite(PIN_IN2, LOW);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, LOW);
+      digitalWrite(PIN_IN4, HIGH);
+    } else if (potValue[0] > 125 && potValue[1] < 125) {
+      analogWrite(PIN_ENA, map(potValue[0], 126, 255, 0, 255));
+      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 255, 0));
+
+      // Задаём направление для 1-го мотора
+      digitalWrite(PIN_IN1, LOW);
+      digitalWrite(PIN_IN2, HIGH);
+
+      // Задаём направление для 2-го мотора
+      digitalWrite(PIN_IN3, HIGH);
+      digitalWrite(PIN_IN4, LOW);
+    } else if (potValue[1] < 125 && potValue[0] < 125) {
+      analogWrite(PIN_ENA, map(potValue[0], 0, 125, 255, 0));
+      analogWrite(PIN_ENB, map(potValue[1], 0, 125, 255, 0));
 
       // Задаём направление для 1-го мотора
       digitalWrite(PIN_IN1, HIGH);
@@ -310,27 +413,39 @@ void command_slowmode() {
 
 void command_shooter() {
   // Обработка команд для стрелялки
+  // Чтобы полностью не парализовать робота в момент активации катапульты (delay(...) останаваливает работу программы на время, указанное в скобках в мс)
+  // мы прямо в цикле каждый раз выполняем хотя бы какое-то движение.
+  
   if (shoot && servo_is_ready) {
     shoot = false;
     servo_is_ready = false;
     for (int i = servo_ready; i >= servo_start; i--) {
       shooter.write(i);
       read_data_motors();
-      if (potValue[5] == 1){
-        command_motor();
-      } else {
+
+      // Вот эти вставки позволяют нам сохранить работоспособность
+      if (potValue[5] == 0){
         command_slowmode();
+      } else if (potValue[6] == 0){
+        command_forsagemode();
+      } else {
+        command_motor();
       }
       delay(13);
     }
+    
   } else if (!servo_is_ready) {
     for (int i = servo_start; i <= servo_second; i++) {
       shooter.write(i);
       read_data_motors();
-      if (potValue[5] == 1){
-        command_motor();
-      } else {
+
+      // Вот эти
+      if (potValue[5] == 0){
         command_slowmode();
+      } else if (potValue[6] == 0){
+        command_forsagemode();
+      } else {
+        command_motor();
       }
       delay(13);
     }
@@ -338,13 +453,19 @@ void command_shooter() {
     for (int i = servo_second; i >= servo_ready; i--) {
       shooter.write(i);
       read_data_motors();
-      if (potValue[5] == 1){
-        command_motor();
-      } else {
+
+      // Вот эти, если вы ещё не поняли
+      if (potValue[5] == 0){
         command_slowmode();
+      } else if (potValue[6] == 0){
+        command_forsagemode();
+      } else {
+        command_motor();
       }
       delay(13);
     }
     servo_is_ready = true;
   }
 }
+// Парни, вы уж извините за такой спагетти-код, но над ним работало два человека в разные годы и большая часть нашей программной работы в нём и других прилагающихся кодах, 
+// так что повнимательнее к деталям.
