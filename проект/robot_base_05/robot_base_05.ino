@@ -1,3 +1,6 @@
+// +- 500 пакетов, выстрел один, канал переставлен на "неблютуз", после выстрела всё продолжает работать
+
+
 #include <SPI.h>  // Подключаем библиотеку для работы с SPI-интерфейсом
 //#include <nRF24L01.h> // Подключаем файл конфигурации из библиотеки RF24
 #include <RF24.h> // Подключаем библиотеку для работа для работы с модулем NRF24L01
@@ -14,8 +17,8 @@
 
 // ПОЛОЖЕНИЯ СЕРВОПРИВОДА (Устанавливаются эксперементально для каждого робота. По причине того, что деталь к сервоприводу крепится под разным углом)
 #define servo_start 0
-#define servo_second 115
-#define servo_ready 35
+#define servo_second 130
+#define servo_ready 40
 
 #define PIN_CE  9  // Номер пина Arduino, к которому подключен вывод CE радиомодуля
 #define PIN_CSN 10 // Номер пина Arduino, к которому подключен вывод CSN радиомодуля
@@ -57,8 +60,8 @@ void setup() {
   // Настройка радиоприёма
   SPI.begin();
   radio.begin();
-  network.begin(90, this_node);  //(channel, node address)
-  radio.setDataRate(RF24_2MBPS);
+  network.begin(0x6a, this_node);  //(channel, node address)
+  radio.setDataRate(RF24_1MBPS);
   
   shooter.attach(pin_servo);
   // Инициализация стрелялки: нулевое положение(servo_start 0) -> положение взвода курка(servo_second 120) -> положение на изготове(servo_ready 30)
@@ -76,19 +79,20 @@ void setup() {
 
 
 void loop() {
-  network.begin(90, this_node);  //(channel, node address)
+  network.begin(0x6a, this_node);  //(channel, node address)
   network.update();
-  Serial.println(scn);
   if (scn < 1000){
-    while (network.available()) {  // Если в буфер приёмника поступили данные
+    while  (network.available()) {  // Если в буфер приёмника поступили данные
       RF24NetworkHeader header;
       network.read(header, &potValue, sizeof(potValue)); // Read the incoming data
       // Изначально было два варианта. Первый - прописать действия в зависимости от джойстика для каждого положения, но так моторы работали ассинхронно.
       // Поэтому было решено прописать действия ситуационно. Оба джойстика вверх, два случая на разные напрваления джойстиков и случай, когда оба вниз.
       // Программы для управления моторами описаны в функциях: command_slowmode, command_motor, command_forsagemode. Подробнее о них прочитаете в void.
-      Serial.println(sg);
+      
+      Serial.println("Inside");
+      
       if (potValue[7] == 109) {
-        sg++;
+        sg ++;
       } 
         
       if (potValue[2] == 0) {
@@ -102,7 +106,8 @@ void loop() {
       if (potValue[4] == 0) {
         shoot = true;
       }
-  
+      
+      //Serial.println(potValue[5]);
       if (potValue[5] == 0){
         command_slowmode();
       } else if (potValue[6] == 0){
@@ -112,24 +117,33 @@ void loop() {
       }
       
       command_shooter();
-      
-    }
+    } 
   }
   scn ++;
-  if (scn >= 1000) scn = 1000;
+  
+  if (scn > 1000) { 
+    scn = 1000;
+  }
   //Servo control at Node 02
   if (scn == 1000){
+    Serial.println("Sending");
     unsigned long packet = sg;
     RF24NetworkHeader header2(node_station);     // (Address where the data is going)
     bool ok = network.write(header2, &packet, sizeof(packet)); // Send the data
     sg = 0;
     scn = 0;
+   
   }
 }
 
+/*
 void read_data_motors() {
-  if (network.available()) {  // Если в буфер приёмника поступили данные
-    network.read(&potValue, sizeof(potValue));    // Читаем показания с пульта
+  network.update();  
+  Serial.println("Now is out 1");
+  while (network.available()) {  // Если в буфер приёмника поступили данные
+    RF24NetworkHeader header;
+    network.read(header, &potValue, sizeof(potValue));    // Читаем показания с пульта
+    
     //изначально было два варианта. первый - прописать действия в зависимости от джойстика для каждого положения, но так моторы работали ассинхронно.
     // поэтому было решено прописать действия ситуационно:  4 случая, приведённые ниже
     if (potValue[2] == 0) {
@@ -139,12 +153,45 @@ void read_data_motors() {
     } else {
       motor_direction = motor_direction;
     }
+      
+    if (scn < 1000 && potValue[7] == 109) {
+      sg++;
+    }
+  }
+  scn++; 
+  Serial.println("Now is out 2");
+}
+*/
+
+void read_data_motors() {
+  //network.begin(0x6a, this_node);  //(channel, node address)
+  network.update();
+  delay(5);
+  while (network.available()) {  // Если в буфер приёмника поступили данные
+    RF24NetworkHeader header;
+    network.read(header, &potValue, sizeof(potValue));    // Читаем показания с пульта
+    //изначально было два варианта. первый - прописать действия в зависимости от джойстика для каждого положения, но так моторы работали ассинхронно.
+    // поэтому было решено прописать действия ситуационно:  4 случая, приведённые ниже
+    Serial.println("edet");
+    if (potValue[2] == 0) {
+      motor_direction = true;
+    } else if (potValue[3] == 0) {
+      motor_direction = false;
+    } else {
+      motor_direction = motor_direction;
+    }
+
+    if (scn < 1000 && potValue[7] == 109) {
+      sg++;
+    }
+    
+    scn++;
   }
 }
 
+
 void command_slowmode() {
   // Конвертирование значений с потенциометров на моторы в режиме slow mode (для манёвров, требующих бОльшей осторожности, потом поймёте)
-  
   if (motor_direction) {
     if (potValue[0] > 125 && potValue[1] > 125) {
       analogWrite(PIN_ENA, map(potValue[1], 126, 255, 0, 70));
@@ -443,10 +490,13 @@ void command_shooter() {
   if (shoot && servo_is_ready) {
     shoot = false;
     servo_is_ready = false;
+    Serial.println("stop shooting");
     for (int i = servo_ready; i >= servo_start; i--) {
       shooter.write(i);
+      
+      Serial.println("try to move");
       read_data_motors();
-
+      
       // Вот эти вставки позволяют нам сохранить работоспособность
       if (potValue[5] == 0){
         command_slowmode();
@@ -455,15 +505,17 @@ void command_shooter() {
       } else {
         command_motor();
       }
-      delay(13);
-    }
-    
+      //delay(9);
+    }  
   } else if (!servo_is_ready) {
+    
+    Serial.println("try to remove");
     for (int i = servo_start; i <= servo_second; i++) {
       shooter.write(i);
+      
       read_data_motors();
-
-      // Вот эти
+      
+      // Вот эти вставки позволяют нам сохранить работоспособность
       if (potValue[5] == 0){
         command_slowmode();
       } else if (potValue[6] == 0){
@@ -471,14 +523,15 @@ void command_shooter() {
       } else {
         command_motor();
       }
-      delay(13);
+      //delay(9);
     }
     
     for (int i = servo_second; i >= servo_ready; i--) {
       shooter.write(i);
+      
       read_data_motors();
-
-      // Вот эти, если вы ещё не поняли
+      
+      // Вот эти вставки позволяют нам сохранить работоспособность
       if (potValue[5] == 0){
         command_slowmode();
       } else if (potValue[6] == 0){
@@ -486,7 +539,7 @@ void command_shooter() {
       } else {
         command_motor();
       }
-      delay(13);
+      //delay(9);
     }
     servo_is_ready = true;
   }
