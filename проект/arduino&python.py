@@ -24,8 +24,8 @@ def anmt(i, dataList, serialCom):
     ax.clear()                                          # Clear last data frame
     ax.plot(dataList)                                   # Plot new data frame
     
-    ax.set_ylim([0, 1000])                              # Set Y axis limit of plot
-    ax.set_title("Arduino Data")                        # Set title of figure
+    ax.set_ylim([0, 700])                              # Set Y axis limit of plot
+    ax.set_title("Robot 5")                        # Set title of figure
     ax.set_ylabel("Value")                              # Set title of y axis 
 
 dataList = []                                           # Create empty list variable for later use
